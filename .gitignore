@@ -1,4 +1,6 @@
-data/
+data/*
+images_static/*
 env/
-static_images/
+images_static/
+*test*
 **DS_Store
