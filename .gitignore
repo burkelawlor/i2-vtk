@@ -1,6 +1,10 @@
-env/
+# Python
 **DS_Store
+**__pycache__
+env/
 
+# Project
 *test*
-data/*V1*
-images_static
+data/sub*
+output_images/
+nilearn_cache
