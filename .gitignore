@@ -4,7 +4,8 @@
 env/
 
 # Project
-data/sub*
+data/fmri/*
+data/ratings/*
 output_images/
 nilearn_cache
 fmri_animation/test_nibabel.ipynb
