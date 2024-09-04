@@ -44,13 +44,38 @@ class fmriFunctionalConnectivity():
             nib.save(self.fmri_parcellated, out_file)
 
 
+    # def calculate_dynamic_correlation_matrix(self, window_size=44, step_size=2, out_file=None):
+    #     # Set number of windows
+    #     n_windows = (self.timeseries.shape[0] - window_size) // step_size + 1
+    #     print(f'Number of windows: {n_windows}')
+
+    #     # Calculate connectivity matrix for each time window
+    #     dynamic_correlation_matrix = np.zeros((n_windows,100,100))
+    #     for i in range(n_windows):
+    #         window_fdata = self.timeseries[i*step_size:i*step_size+window_size, :]
+    #         connectivity_measure = ConnectivityMeasure(
+    #             kind="correlation",
+    #             standardize="zscore_sample",
+    #         )
+    #         window_correlation_matrix = connectivity_measure.fit_transform([window_fdata])[0]
+    #         np.fill_diagonal(window_correlation_matrix, 0)
+    #         dynamic_correlation_matrix[i] = window_correlation_matrix
+        
+    #     if out_file:
+    #         print(f'Saving to {out_file}')
+    #         np.save(out_file, dynamic_correlation_matrix)
+        
+    #     self.dynamic_correlation_matrix = dynamic_correlation_matrix
+
     def calculate_dynamic_correlation_matrix(self, window_size=44, step_size=2, out_file=None):
         # Set number of windows
         n_windows = (self.timeseries.shape[0] - window_size) // step_size + 1
         print(f'Number of windows: {n_windows}')
 
         # Calculate connectivity matrix for each time window
-        dynamic_correlation_matrix = np.zeros((n_windows,100,100))
+        dynamic_correlation_matrix = np.zeros((n_windows, 100, 100))
+        dynamic_correlation_matrix_timestamps = np.zeros(n_windows)
+        
         for i in range(n_windows):
             window_fdata = self.timeseries[i*step_size:i*step_size+window_size, :]
             connectivity_measure = ConnectivityMeasure(
@@ -60,12 +85,18 @@ class fmriFunctionalConnectivity():
             window_correlation_matrix = connectivity_measure.fit_transform([window_fdata])[0]
             np.fill_diagonal(window_correlation_matrix, 0)
             dynamic_correlation_matrix[i] = window_correlation_matrix
-        
+            
+            # Calculate the timestamp for the center of the window
+            center_frame = i * step_size + window_size // 2
+            timestamp = center_frame * 0.9  # Each frame is 900ms apart
+            dynamic_correlation_matrix_timestamps[i] = timestamp
+
         if out_file:
             print(f'Saving to {out_file}')
             np.save(out_file, dynamic_correlation_matrix)
         
         self.dynamic_correlation_matrix = dynamic_correlation_matrix
+        self.dynamic_correlation_matrix_timestamps = dynamic_correlation_matrix_timestamps
 
     def connectivity_matrices_to_images(self, out_dir='images_static/corr_matrices', dpi=100):
         for i in range(self.dynamic_correlation_matrix.shape[0]):
