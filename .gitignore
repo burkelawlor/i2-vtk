@@ -7,6 +7,7 @@ env/
 # Project
 data/fmri/*
 data/ratings/*
+data/gfc_volumes/*
 output_images/
 nilearn_cache
 fmri_animation/test_nibabel.ipynb

@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 import glob as glob
+import os
+import time
 
 import nibabel as nib
 from nilearn import image
@@ -10,13 +12,11 @@ from nilearn.connectome import ConnectivityMeasure
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-def parcellate(target_nii, parcel_nii, parcel_labels, out=True):
-    # Load files
-    target_raw = nib.load(target_nii)
-    parcel_raw = nib.load(parcel_nii)
+
+def parcellate(target_img, parcel_img, parcel_labels, out=None):
     
     # For the parcellation img, resample the shape to the target img, but not the affine (to preserve the network labels)
-    parcel_resampled = image.resample_img(parcel_raw, target_affine=parcel_raw.affine, target_shape=target_raw.shape[:3]) 
+    parcel_resampled = image.resample_img(parcel_img, target_affine=parcel_img.affine, target_shape=target_img.shape[:3]) 
 
     # Apply the parcellation masker
     masker = NiftiLabelsMasker(
@@ -27,13 +27,12 @@ def parcellate(target_nii, parcel_nii, parcel_labels, out=True):
         standardize_confounds="zscore_sample",
         memory='nilearn_cache',
     )
-    timeseries = masker.fit_transform(target_raw)
+    timeseries = masker.fit_transform(target_img)
     target_parcellated = masker.inverse_transform(timeseries)
 
     if out:
-        out_file = target_nii.replace('.nii', '_parcellated.nii')
-        nib.save(target_parcellated, out_file)
-        print(f'Saved parcellated file to {out_file}')
+        nib.save(target_parcellated, out)
+        print(f'Saved parcellated file to {out}')
 
     return target_parcellated, timeseries
 
@@ -124,27 +123,87 @@ def plot_agg_gdfc_with_ratings(timestamps, gdfc_matrix, parcel_labels, parcels_o
 
 
 class I2Run():
-    def __init__(self, subject, session, task, run):
-        self.target_nii = f'data/fmri/sub-0{subject}_ses-V{session}_task-S{task}_run-0{run}_space-MNI152NLin2009cAsym_res-2_desc-denoisedSmoothed_bold.nii.gz'
-        parcel_nii = 'data/Schaefer2018_100Parcels_7Networks_order_FSLMNI152_2mm.nii'
-        
-        parcel_df = pd.read_csv('data/Schaefer2018_100Parcels_7Networks_order.csv')
-        parcel_labels = ['Background'] + list(parcel_df['full_name'])
+    def __init__(self, target_nii, target_ratings):
+        self.target_nii = target_nii
+        self.target_img = nib.load(self.target_nii)
 
-        self.target_parcellated, self.timeseries = parcellate(self.target_nii, parcel_nii, parcel_labels, out=False)
-        self.dfc_matrix, self.timestamps = dynamic_fc(self.timeseries, window_size=44, step_size=2, frame_ms=900)
+        self.target_ratings = target_ratings
+        self.ratings_df = pd.read_csv(self.target_ratings)
+
+    def parcellate_i2(self, parcel_nii, parcel_labels):
+        self.parcel_nii = parcel_nii
+        self.parcel_labels = parcel_labels
+        self.parcel_img = nib.load(self.parcel_nii)
+        self.target_parcellated, self.timeseries = parcellate(self.target_img, self.parcel_img, self.parcel_labels)
+    
+    def dynamic_fc_i2(self, window_size=44, step_size=2, frame_ms=900):
+        self.dfc_matrix, self.timestamps = dynamic_fc(self.timeseries, window_size, step_size, frame_ms)
+
+    def dynamic_gfc_i2(self):
         self.gdfc_matrix = dynamic_gfc(self.dfc_matrix)
-
-        ratings_file = glob.glob(f'data/ratings/PID{subject}_v{session}_s{task}_r{run} - *.csv')[0]    
-        self.ratings_df = pd.read_csv(ratings_file)
 
     def i2_plot_agg_gdfc_with_ratings(self, parcels_of_interest):
         plot_agg_gdfc_with_ratings(self.timestamps, self.gdfc_matrix, self.parcel_labels, parcels_of_interest, self.ratings_df)
 
-i2_run = I2Run(subject=1, session=1, task=2, run=2)
+    def gfc_volumes(self, out=False):
 
+        # Crate a template volume of parcel labels
+        frame_template = self.parcel_img.get_fdata()
+        x, y, z = frame_template.shape
+        n_frames = self.gdfc_matrix.shape[0]
+
+        volumes = np.zeros((x, y, z, n_frames)) # initialize an empty array to store the volumes
+        for i in range(n_frames):
+            
+            frame_volume = frame_template.copy() # make a copy of the template volume
+            frame_values = i2_run.gdfc_matrix[i] # get the GFC values for the frame
+            frame_values_map = dict(enumerate(frame_values, 1)) # make a map of parcels to GFC values
+
+            # Replace the parcel labels in the template volume with the GFC values
+            for parcel, gfc_value in frame_values_map.items():
+                frame_volume[frame_volume == parcel] = gfc_value
+        
+            volumes[:,:,:,i] = frame_volume
+
+        self.gfc_volumes = volumes
+
+        # Save the volumes to a file
+        if out:
+            np.save(out, volumes)
+
+
+parcel_nii = 'data/Schaefer2018_100Parcels_7Networks_order_FSLMNI152_2mm.nii'
+parcel_df = pd.read_csv('data/Schaefer2018_100Parcels_7Networks_order.csv')
+parcel_labels = ['Background'] + list(parcel_df['full_name'])
 parcels_of_interest = ['7Networks_LH_Default_PCC_1', '7Networks_LH_Default_PCC_2', '7Networks_RH_Default_PFCm_1', '7Networks_RH_Default_PFCm_2', '7Networks_RH_Default_PFCm_3', '7Networks_RH_Default_PCC_1', '7Networks_RH_Default_PCC_2']
 
-plt.figure(figsize=(16,6))
-i2_run.i2_plot_agg_gdfc_with_ratings(parcels_of_interest)
-plt.show()
+target_nii = f'data/fmri/sub-0{1}_ses-V{1}_task-S{2}_run-0{2}_space-MNI152NLin2009cAsym_res-2_desc-denoisedSmoothed_bold.nii.gz'
+target_ratings = f'data/ratings/PID{1}_v{1}_s{2}_r{2} - 2023-09-01.csv'
+
+i2_run = I2Run(target_nii, target_ratings)
+i2_run.parcellate_i2(parcel_nii, parcel_labels)
+i2_run.dynamic_fc_i2()
+i2_run.dynamic_gfc_i2()
+i2_run.gfc_volumes(out=f'data/gfc_volumes/sub-0{1}_ses-V{1}_task-S{2}_run-0{2}_space-MNI152NLin2009cAsym_res-2_desc-denoisedSmoothed_bold.npy')
+
+# i2_run.i2_plot_agg_gdfc_with_ratings(parcels_of_interest)
+# plt.show()
+
+# # Sanity checks
+# i2_run.gfc_volumes
+# i2_run.gfc_volumes.shape
+
+# # Plot a single volume (as a check that we did it right)
+# from nilearn import plotting
+# frame_img = nib.Nifti1Image(i2_run.gfc_volumes[:,:,:,0], affine=i2_run.parcel_img.affine)
+# display = plotting.plot_stat_map(
+#     frame_img, 
+#     vmin=-0.3, 
+#     vmax=0.3, 
+#     cmap='cold_hot',
+#     display_mode='x', 
+#     cut_coords=[4], 
+#     draw_cross=False)
+# plotting.show()
+
+
