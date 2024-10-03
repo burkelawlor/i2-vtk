@@ -5,8 +5,9 @@ env/
 .vscode/
 
 # Project
-data/fmri/*
 data/ratings/*
+data/functional_connectivity/*
+data/signal_intensity/*
 data/gfc_volumes/*
 output_images/
 nilearn_cache
