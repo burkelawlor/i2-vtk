@@ -13,6 +13,7 @@ executing==2.0.1
 fonttools==4.51.0
 grapheme==0.6.0
 idna==3.7
+imageio==2.35.1
 ipykernel==6.29.4
 ipython==8.24.0
 jedi==0.19.1

@@ -2,10 +2,20 @@
 **DS_Store
 **__pycache__
 env/
+.vscode/
 
 # Project
-data/sub*
+data/ratings/*
+data/functional_connectivity/*
+data/signal_intensity/*
+data/gfc_volumes/*
 output_images/
 nilearn_cache
 fmri_animation/test_nibabel.ipynb
 fmri_animation/test_nilearn.ipynb
+
+# Examples/testing
+data/turbines.csv.gz*
+testing.ipynb
+i2_viz/dashboard_v1.ipynb
+i2_viz/dashboard_v2.ipynb
