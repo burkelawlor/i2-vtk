@@ -19,3 +19,4 @@ data/turbines.csv.gz*
 testing.ipynb
 i2_viz/dashboard_v1.ipynb
 i2_viz/dashboard_v2.ipynb
+old/*
