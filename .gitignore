@@ -13,3 +13,7 @@ output_images/
 nilearn_cache
 fmri_animation/test_nibabel.ipynb
 fmri_animation/test_nilearn.ipynb
+
+# Examples
+data/turbines.csv.gz*
+testing.ipynb
