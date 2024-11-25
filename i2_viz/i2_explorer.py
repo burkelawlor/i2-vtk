@@ -10,9 +10,11 @@ import hvplot.pandas
 from utilities import *
 from data_loading import run_options, parcel_labels, default_parcels, parcel_labels_map, I2Run
 
+pn.extension('vtk', defer_load=True, loading_indicator=True)
+
 cmap = 'seismic'
 
-class I2Explorer(param.Parameterized):
+class I2Explorer(pn.viewable.Viewer):
     
     # Parametrized instance of I2Run for data loading
     run = param.ClassSelector(class_=I2Run, doc="Instance of I2Run to load data for selected run")
@@ -33,8 +35,7 @@ class I2Explorer(param.Parameterized):
     
     def __init__(self, **params):
         super().__init__(**params)
-        self.update_run() 
-        self.update_frame()
+        pn.state.onload(self.update_run)
         
 
     @param.depends('run_select', watch=True)
@@ -49,7 +50,9 @@ class I2Explorer(param.Parameterized):
         self.param.frame_player.bounds = (1, self.run.n_windows)
         self.param.i_slice.bounds = (1, self.run.run_img.shape[0])
         self.param.j_slice.bounds = (1, self.run.run_img.shape[1])
-        self.param.k_slice.bounds = (1, self.run.run_img.shape[2])        
+        self.param.k_slice.bounds = (1, self.run.run_img.shape[2])
+
+        self.update_frame()
         
 
     @param.depends('parcels_select', watch=True)
@@ -183,7 +186,7 @@ class I2Explorer(param.Parameterized):
 
     
     def __panel__(self):
-        # template = pn.template.VanillaTemplate(
+
         template = pn.template.ReactTemplate(
             title='I2 Run Explorer',
             prevent_collision=False,
@@ -215,6 +218,4 @@ class I2Explorer(param.Parameterized):
         return template
 
 
-if __name__ == "__main__":
-    explorer = I2Explorer()
-    explorer.__panel__().servable()
+I2Explorer().servable()
