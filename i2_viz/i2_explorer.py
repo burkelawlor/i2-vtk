@@ -52,6 +52,7 @@ class I2Explorer(pn.viewable.Viewer):
         self.param.j_slice.bounds = (1, self.run.run_img.shape[1])
         self.param.k_slice.bounds = (1, self.run.run_img.shape[2])
 
+        self.frame_player = 1
         self.update_frame()
         
 
