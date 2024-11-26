@@ -10,7 +10,7 @@ import hvplot.pandas
 from utilities import *
 from data_loading import run_options, parcel_labels, default_parcels, parcel_labels_map, I2Run
 
-pn.extension('vtk', defer_load=True, loading_indicator=True)
+pn.extension('vtk', defer_load=True, loading_indicator=False)
 
 cmap = 'seismic'
 
