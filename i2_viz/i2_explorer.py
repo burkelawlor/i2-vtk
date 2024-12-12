@@ -189,7 +189,7 @@ class I2Explorer(pn.viewable.Viewer):
     def __panel__(self):
 
         template = pn.template.ReactTemplate(
-            title='I2 Run Explorer',
+            title='I2 Visualization Toolkit',
             prevent_collision=False,
             row_height=125,
         )
