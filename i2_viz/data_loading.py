@@ -12,7 +12,7 @@ from nilearn.maskers import NiftiLabelsMasker
 run_ratings_dict = {
     'sub-01_ses-V1_task-S2_run-02_space-MNI152NLin2009cAsym_res-2_desc-denoisedSmoothed_bold': 'PID1_v1_s2_r2 - 2023-09-01',
     'sub-01_ses-V1_task-S1_run-03_space-MNI152NLin2009cAsym_res-2_desc-denoisedSmoothed_bold': 'PID1_v1_s1_r3 - 2023-09-01',
-    'sub-01_ses-V1_task-S0_run-01_space-MNI152NLin2009cAsym_res-2_desc-denoisedSmoothed_bold': 'PID1_v1_s0_r1 - 2023-08-31'
+    # 'sub-01_ses-V1_task-S0_run-01_space-MNI152NLin2009cAsym_res-2_desc-denoisedSmoothed_bold': 'PID1_v1_s0_r1 - 2023-08-31'
 }
 run_options = list(run_ratings_dict.keys())
 
@@ -29,7 +29,7 @@ def load_ratings(ratings_path):
 
 
 class I2Run:
-    _cache = {}
+    # _cache = {}
 
     def __init__(self, run_prefix, window_size=44, step_size=2, frame_ms=900):
         self.run_prefix = run_prefix
@@ -42,11 +42,11 @@ class I2Run:
 
     def load_data(self):
 
-        if self.run_prefix in I2Run._cache:
-            print(f"Loading {self.run_prefix} from cache.")
-            cached_data = I2Run._cache[self.run_prefix]
-            self.__dict__.update(cached_data)
-        else:
+        # if self.run_prefix in I2Run._cache:
+        #     print(f"Loading {self.run_prefix} from cache.")
+        #     cached_data = I2Run._cache[self.run_prefix]
+        #     self.__dict__.update(cached_data)
+        # else:
             print(f"Loading new data for {self.run_prefix}.")
             # Load image and ratings based on the current run_prefix
             self.run_img = nib.load(f'data/signal_intensity/{self.run_prefix}.nii.gz')
@@ -72,8 +72,8 @@ class I2Run:
             # Functional connectivities
             self.calculate_functional_connectivities()
 
-            # Cache the instance data for future use
-            I2Run._cache[self.run_prefix] = self.__dict__.copy()
+            # # Cache the instance data for future use
+            # I2Run._cache[self.run_prefix] = self.__dict__.copy()
     
     
     def parcellate(self, out=True):
