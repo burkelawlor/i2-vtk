@@ -194,9 +194,10 @@ class I2Explorer(pn.viewable.Viewer):
 
         template = pn.template.ReactTemplate(
             title='I2 Visualization Toolkit',
+            favicon='favicon.ico',
             prevent_collision=False,
             row_height=125,
-            favicon='~/4059-200.png'
+            
         )
         template.sidebar.append(
             pn.Column(
