@@ -4,7 +4,6 @@ import numpy as np
 import param
 import holoviews as hv
 import panel as pn
-from holoviews.operation.datashader import rasterize
 import hvplot.pandas
 
 from utilities import *
