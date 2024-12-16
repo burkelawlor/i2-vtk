@@ -12,7 +12,7 @@ from nilearn.maskers import NiftiLabelsMasker
 run_ratings_dict = {
     'sub-01_ses-V1_task-S2_run-02_space-MNI152NLin2009cAsym_res-2_desc-denoisedSmoothed_bold': 'PID1_v1_s2_r2 - 2023-09-01',
     'sub-01_ses-V1_task-S1_run-03_space-MNI152NLin2009cAsym_res-2_desc-denoisedSmoothed_bold': 'PID1_v1_s1_r3 - 2023-09-01',
-    # 'sub-01_ses-V1_task-S0_run-01_space-MNI152NLin2009cAsym_res-2_desc-denoisedSmoothed_bold': 'PID1_v1_s0_r1 - 2023-08-31'
+    'sub-01_ses-V1_task-S0_run-01_space-MNI152NLin2009cAsym_res-2_desc-denoisedSmoothed_bold': 'PID1_v1_s0_r1 - 2023-08-31'
 }
 run_options = list(run_ratings_dict.keys())
 
