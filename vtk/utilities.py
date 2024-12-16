@@ -30,7 +30,7 @@ def image_slice_k(sk, vol, low, high, cmap='seismic', colorbar=True, tools=[]):
     return image_slice(['x','y'], array, low, high, bounds, cmap, colorbar, tools)
 
 
-underlay_img  = nib.load('/Users/burkelawlor/Repos/i2-viz/data/ch2bet_resampled.nii')
+underlay_img  = nib.load('data/ch2bet_resampled.nii')
 underlay_vol = underlay_img.get_fdata()
 underlay_clim = normalize_to_symmetric_range(underlay_vol.min(), underlay_vol.max())
 underlay_common = dict(
