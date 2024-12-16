@@ -30,7 +30,7 @@ class I2Explorer(pn.viewable.Viewer):
     i_slice = param.Integer(97//2, bounds=(1, 97), label="i slice")
     j_slice = param.Integer(115//2, bounds=(1, 115), label="j slice")
     k_slice = param.Integer(97//2, bounds=(1, 97), label="k slice")
-    center_slice = param.Action(lambda self: self.reset_slices(), label="Center slices") 
+    center_slice = param.Action(lambda self: self.reset_slices(), label="Center slices")
 
     
     def __init__(self, **params):
@@ -64,7 +64,7 @@ class I2Explorer(pn.viewable.Viewer):
         # Update gdfc volume
         self.parcels_vol_mask = np.isin(self.run.parcel_img_resampled.get_fdata(), parcels_idx)
         parcels_d_vol_mask = np.broadcast_to(self.parcels_vol_mask[..., None], self.run.dgfc_vol.shape)
-        self.parcels_dgfc_vol = np.where(parcels_d_vol_mask, self.run.dgfc_vol, 0)
+        self.parcels_dgfc_vol = np.where(parcels_d_vol_mask, self.run.dgfc_vol, np.nan)
 
         # Update dfc & gdfc matrix
         self.parcels_dfc_matrix = self.run.dfc_matrix[:,parcels_idx-1][:,:,parcels_idx-1]
@@ -82,7 +82,9 @@ class I2Explorer(pn.viewable.Viewer):
             vol = self.frame_vol,
             low=self.gfc_clim[0],
             high=self.gfc_clim[1],
-            cmap=cmap
+            cmap=cmap,
+            colorbar=True,
+            tools=['hover']
         )
         
         dmap_common = dict(
@@ -90,23 +92,25 @@ class I2Explorer(pn.viewable.Viewer):
             height=350
         )
 
-        dmap_i = rasterize(hv.DynamicMap(pn.bind(image_slice_i, si=self.i_slice, **slice_common)).opts(title='slice i', **dmap_common))
-        dmap_j = rasterize(hv.DynamicMap(pn.bind(image_slice_j, sj=self.j_slice, **slice_common)).opts(title='slice j', **dmap_common))
-        dmap_k = rasterize(hv.DynamicMap(pn.bind(image_slice_k, sk=self.k_slice, **slice_common)).opts(title='slice k', **dmap_common))
+        # dmap_i = rasterize(hv.DynamicMap(pn.bind(image_slice_i, si=self.i_slice, **slice_common)).opts(title='slice i', **dmap_common))
+        dmap_i = hv.DynamicMap(pn.bind(image_slice_i_with_underlay, self.i_slice, slice_common)).opts(title='slice i', **dmap_common)
+        dmap_j = hv.DynamicMap(pn.bind(image_slice_j_with_underlay, self.j_slice, slice_common)).opts(title='slice j', **dmap_common)
+        dmap_k = hv.DynamicMap(pn.bind(image_slice_k_with_underlay, self.k_slice, slice_common)).opts(title='slice k', **dmap_common)
 
         # fix for common colorbar here likely here... or i'll have to build it to also match the heatmap
-        return (dmap_i + dmap_j + dmap_k).opts(shared_axes=True)
+        return (dmap_i + dmap_j + dmap_k).opts(shared_axes=True, title='Slice Views of Parcellated Global FC')
         
 
     @param.depends('run_select','parcels_select', 'i_slice', 'j_slice', 'k_slice')
     def volume_display(self):
         # arr = np.where(self.selected_parcels_mask_3d, 1., np.nan) # nan option
-        arr = self.parcels_vol_mask.astype(float) # bool option
-        
+        # arr = self.parcels_vol_mask.astype(float) # bool option
+    
         volume = pn.pane.VTKVolume(
-                arr,  orientation_widget=True,
-                display_slices=True, display_volume=True,
-                render_background='#ffffff', colormap='Grayscale'
+                underlay_vol,  orientation_widget=True,
+                display_slices=True, display_volume=False,
+                colormap='Grayscale', render_background='#ffffff', 
+                # diffuse=0.5
 
         )
         volume.slice_i = self.i_slice
@@ -192,6 +196,7 @@ class I2Explorer(pn.viewable.Viewer):
             title='I2 Visualization Toolkit',
             prevent_collision=False,
             row_height=125,
+            favicon='~/4059-200.png'
         )
         template.sidebar.append(
             pn.Column(
