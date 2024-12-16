@@ -25,7 +25,9 @@ class I2Explorer(pn.viewable.Viewer):
     parcels_dgfc_vol = param.Parameter(doc="Filtered data for selected parcels")
     parcels_dfc_matrix = param.Parameter(doc="Dynamic functional connectivity matrix for selected parcels")
 
-    frame_player = param.Integer(1, bounds=(1, 100), label="Frame")
+    frame_toggle = param.ObjectSelector(default='Range', objects=['Range', 'Player'])
+    frame_range = param.Range((1,100), bounds=(1,100), label="Selected frames")
+    frame_player = param.Integer(1, bounds=(1, 100), label="Selected frame")
 
     i_slice = param.Integer(97//2, bounds=(1, 97), label="i slice")
     j_slice = param.Integer(115//2, bounds=(1, 115), label="j slice")
@@ -36,6 +38,19 @@ class I2Explorer(pn.viewable.Viewer):
     def __init__(self, **params):
         super().__init__(**params)
         pn.state.onload(self.update_run)
+
+        self.run_select_widget = pn.widgets.Select.from_param(self.param.run_select)
+        self.parcels_select_widget = pn.widgets.MultiSelect.from_param(self.param.parcels_select, size=8)
+        
+        self.frame_toggle_widget = pn.widgets.RadioButtonGroup.from_param(self.param.frame_toggle)
+        self.frame_range_widget = pn.widgets.IntRangeSlider.from_param(self.param.frame_range, visible=True)
+        self.frame_player_widget = pn.widgets.Player.from_param(self.param.frame_player, value=0, loop_policy='loop', show_value=True, width=310, visible=False)
+
+        
+        self.i_slice_widget = pn.widgets.IntSlider.from_param(self.param.i_slice)
+        self.j_slice_widget = pn.widgets.IntSlider.from_param(self.param.j_slice)
+        self.k_slice_widget = pn.widgets.IntSlider.from_param(self.param.k_slice)
+        self.center_slice_widget = pn.widgets.Button.from_param(self.param.center_slice)
         
 
     @param.depends('run_select', watch=True)
@@ -48,6 +63,8 @@ class I2Explorer(pn.viewable.Viewer):
         self.update_parcels()
 
         self.param.frame_player.bounds = (1, self.run.n_windows)
+        self.param.frame_range.bounds = (1, self.run.n_windows)
+        self.param.frame_range = (1, self.run.n_windows)
         self.param.i_slice.bounds = (1, self.run.run_img.shape[0])
         self.param.j_slice.bounds = (1, self.run.run_img.shape[1])
         self.param.k_slice.bounds = (1, self.run.run_img.shape[2])
@@ -71,25 +88,30 @@ class I2Explorer(pn.viewable.Viewer):
         self.parcels_dgfc_matrix = self.run.dgfc_matrix[:,parcels_idx-1]
 
 
-    @param.depends('run_select', 'parcels_select', 'frame_player', watch=True)
+    @param.depends('run_select', 'parcels_select', 'frame_toggle', 'frame_range', 'frame_player', watch=True)
     def update_frame(self):
-        self.frame_vol = self.parcels_dgfc_vol[..., self.frame_player - 1]
-        self.frame_matrix = self.parcels_dfc_matrix[self.frame_player - 1]
+        if self.frame_toggle == 'Player':
+            self.frame_vol = self.parcels_dgfc_vol[..., self.frame_player - 1]
+            self.frame_matrix = self.parcels_dfc_matrix[self.frame_player - 1]
+        
+        elif self.frame_toggle == 'Range':
+            self.frame_vol = self.parcels_dgfc_vol[..., self.frame_range[0]-1:self.frame_range[1]-1].mean(axis=3)
+            self.frame_matrix = self.parcels_dfc_matrix[self.frame_range[0]-1:self.frame_range[1]-1].mean(axis=0)
     
-    @param.depends('run_select', 'parcels_select', 'frame_player', 'i_slice', 'j_slice', 'k_slice')
+    @param.depends('run_select', 'parcels_select', 'frame_toggle', 'frame_range', 'frame_player', 'i_slice', 'j_slice', 'k_slice')
     def slices_display(self):
         slice_common = dict(
             vol = self.frame_vol,
-            low=self.gfc_clim[0],
-            high=self.gfc_clim[1],
-            cmap=cmap,
-            colorbar=True,
-            tools=['hover']
+            low = self.gfc_clim[0],
+            high = self.gfc_clim[1],
+            cmap = cmap,
+            colorbar = True,
+            tools = ['hover']
         )
         
         dmap_common = dict(
-            width=400,
-            height=350
+            width = 400,
+            height = 350
         )
 
         # dmap_i = rasterize(hv.DynamicMap(pn.bind(image_slice_i, si=self.i_slice, **slice_common)).opts(title='slice i', **dmap_common))
@@ -120,7 +142,7 @@ class I2Explorer(pn.viewable.Viewer):
         return volume
     
     
-    @param.depends('run_select', 'parcels_select', 'frame_player')
+    @param.depends('run_select', 'parcels_select', 'frame_toggle', 'frame_range', 'frame_player')
     def dfc_matrix_display(self):
         dfc_df = pd.DataFrame(self.frame_matrix, index=self.parcels_select, columns=self.parcels_select)
         dfc_heatmap = dfc_df.hvplot.heatmap(
@@ -133,7 +155,7 @@ class I2Explorer(pn.viewable.Viewer):
         return dfc_heatmap
 
 
-    @param.depends('run_select', 'parcels_select', 'frame_player')
+    @param.depends('run_select', 'parcels_select', 'frame_toggle', 'frame_range', 'frame_player')
     def lineplot_display(self):
         # Set up data for GFC lineplot
         y_parcels = pd.DataFrame(self.parcels_dgfc_matrix, columns=self.parcels_select)
@@ -149,9 +171,16 @@ class I2Explorer(pn.viewable.Viewer):
                     y_parcels.groupby('time').gdfc.mean().reset_index().hvplot.line(x='time', y='gdfc', color='black', label='Mean GFC')
 
         scatterplot = functional_ratings.hvplot.scatter(x='Seconds since start', y='Answer', by='Question', legend='top_left')
-        vertical_line = hv.DynamicMap(pn.bind(vertical_line_callback, time_current=self.run.window_timestamps[self.frame_player - 1]))
+        
+        if self.frame_toggle == 'Player':
+            current_time = self.run.window_timestamps[self.frame_player - 1]
+            time_overlay = hv.DynamicMap(pn.bind(vertical_line_callback, x=current_time))
+        elif self.frame_toggle == 'Range':
+            start_time = self.run.window_timestamps[self.frame_range[0] - 1]
+            end_time = self.run.window_timestamps[self.frame_range[1] - 1]
+            time_overlay = hv.DynamicMap(pn.bind(transparent_box_callback, x0=start_time, x1=end_time))
 
-        final_lineplot = (lineplot * scatterplot * vertical_line).opts(
+        final_lineplot = (lineplot * scatterplot * time_overlay).opts(
             title="GFC of selected parcels and subjective ratings with Current Time",
             xlabel="Time (s)",
             ylabel="GFC",
@@ -187,8 +216,17 @@ class I2Explorer(pn.viewable.Viewer):
             - **Selected parcels**: {', '.join(self.parcels_select)}
         """, sizing_mode="stretch_width")
 
-
-
+    
+    @param.depends('frame_toggle', watch=True)
+    def update_frame_widget(self):
+        """Show only one of the widgets (Player or IntRangeSlider) based on the toggle selection."""
+        if self.frame_toggle == 'Player':
+            self.frame_player_widget.visible = True
+            self.frame_range_widget.visible = False
+        elif self.frame_toggle == 'Range':
+            self.frame_player_widget.visible = False
+            self.frame_range_widget.visible = True
+    
     
     def __panel__(self):
 
@@ -201,18 +239,19 @@ class I2Explorer(pn.viewable.Viewer):
         )
         template.sidebar.append(
             pn.Column(
-                self.param.run_select,
-                pn.widgets.MultiSelect.from_param(self.param.parcels_select, size=8),
+                self.run_select_widget,
+                self.parcels_select_widget,
                 pn.Spacer(height=20),
                 
                 pn.panel('## Time controller'),
-                pn.widgets.Player.from_param(self.param.frame_player, value=0, loop_policy='loop', show_value=True, width=310),
+                self.frame_toggle_widget,
+                self.frame_range_widget,
+                self.frame_player_widget,
                 pn.Spacer(height=20),
                 
                 pn.panel('## Slice controller'),
-                pn.Column(self.param.i_slice, self.param.j_slice, self.param.k_slice),
-                pn.widgets.Button.from_param(self.param.center_slice),
-            
+                pn.Column(self.i_slice_widget, self.j_slice_widget, self.k_slice_widget),
+                self.center_slice_widget,
             )
         )
 

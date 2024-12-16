@@ -53,8 +53,13 @@ def image_slice_k_with_underlay(sk, slice_common):
 
 
 # Time series plotting
-def vertical_line_callback(time_current):
-    return hv.VLine(time_current).opts(color='red', line_width=2, line_dash='dashed')
+def vertical_line_callback(x):
+    """Create a vertical line at the specified time."""
+    return hv.VLine(x).opts(color='red', line_width=2, line_dash='dashed')
+
+def transparent_box_callback(x0, x1):
+    """Create a transparent red box between a range of x-values."""
+    return hv.Rectangles([(x0, -1, x1, 5)]).opts(color='red', alpha=0.2)
 
 from bokeh.models import GlyphRenderer, LinearAxis, LinearScale, Range1d
 def overlay_hook(plot, element):
