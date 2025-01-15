@@ -9,6 +9,7 @@ data/ratings/*
 data/functional_connectivity/*
 data/signal_intensity/*
 data/gfc_volumes/*
+data/PID6_forBurke/*
 output_images/
 nilearn_cache
 fmri_animation/test_nibabel.ipynb
